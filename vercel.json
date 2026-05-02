@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "functions": {
+    "api/kobo-proxy.js": {
+      "memory": 128,
+      "maxDuration": 30
+    }
+  },
+  "env": {
+    "NODE_ENV": "production"
+  }
+}

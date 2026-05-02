@@ -1,0 +1,13 @@
+{
+  "name": "drdip-ii-kobo-proxy",
+  "version": "1.0.0",
+  "description": "Secure CORS proxy for DRDIP-II KoboToolbox dashboard",
+  "private": true,
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'Build complete'"
+  }
+}
