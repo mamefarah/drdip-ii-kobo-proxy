@@ -1,11 +1,20 @@
 {
   "version": 2,
   "functions": {
-    "api/kobo-proxy.js": {
-      "memory": 128,
+    "api/*.js": {
+      "memory": 512,
       "maxDuration": 30
     }
   },
+  "routes": [
+    {
+      "src": "/api/kobo-proxy(.*)",
+      "dest": "/api/kobo-proxy.js",
+      "headers": {
+        "Cache-Control": "public, max-age=60"
+      }
+    }
+  ],
   "env": {
     "NODE_ENV": "production"
   }
