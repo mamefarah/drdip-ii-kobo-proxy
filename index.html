@@ -1,0 +1,2379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DRDIP-II Somali Region Field Monitoring Dashboard</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+  <!-- Leaflet Maps -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- PDF Generation -->
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Manrope', sans-serif;
+      background-color: #f6f7f9;
+      color: #333;
+      line-height: 1.6;
+    }
+
+    code, pre {
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    /* HEADER */
+    header {
+      background: linear-gradient(135deg, #0f1729 0%, #0a7c3a 100%);
+      color: white;
+      padding: 1.2rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .logo {
+      background-color: rgba(255,255,255,0.2);
+      color: white;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 1.2rem;
+    }
+
+    .header-title {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header-title h1 {
+      font-size: 1.3rem;
+      font-weight: 700;
+    }
+
+    .header-title p {
+      font-size: 0.85rem;
+      opacity: 0.9;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background-color: rgba(255,255,255,0.15);
+      padding: 0.6rem 1.2rem;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      backdrop-filter: blur(10px);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #10b981;
+      animation: pulse 2s infinite;
+    }
+
+    .status-dot.error {
+      background-color: #ef4444;
+      animation: none;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .record-count {
+      background-color: rgba(255,255,255,0.15);
+      padding: 0.6rem 1.2rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-family: 'IBM Plex Mono', monospace;
+      backdrop-filter: blur(10px);
+    }
+
+    .btn {
+      padding: 0.6rem 1.2rem;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-family: 'Manrope', sans-serif;
+    }
+
+    .btn-primary {
+      background-color: white;
+      color: #0a7c3a;
+    }
+
+    .btn-primary:hover {
+      background-color: #f0f0f0;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    .btn-secondary {
+      background-color: rgba(255,255,255,0.2);
+      color: white;
+      backdrop-filter: blur(10px);
+    }
+
+    .btn-secondary:hover {
+      background-color: rgba(255,255,255,0.3);
+    }
+
+    .btn-icon {
+      padding: 0.6rem;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* MAIN CONTENT */
+    .container {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    /* KPI STRIP */
+    .kpi-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .kpi-card {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      border-top: 4px solid #0a7c3a;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 80px;
+      height: 80px;
+      background: radial-gradient(circle, rgba(10,124,58,0.1) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+
+    .kpi-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 16px rgba(10,124,58,0.15);
+    }
+
+    .kpi-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: #999;
+      font-weight: 700;
+      letter-spacing: 1px;
+      margin-bottom: 0.8rem;
+    }
+
+    .kpi-value {
+      font-size: 2.2rem;
+      font-weight: 700;
+      font-family: 'IBM Plex Mono', monospace;
+      color: #0a7c3a;
+      margin-bottom: 0.6rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .kpi-note {
+      font-size: 0.8rem;
+      color: #999;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* FILTERS */
+    .filters-section {
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      margin-bottom: 2rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .filters-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      color: #999;
+      font-weight: 700;
+      letter-spacing: 1px;
+      margin-bottom: 1.5rem;
+    }
+
+    .filters-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.2rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .filter-group label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 0.5rem;
+    }
+
+    select, input[type="text"] {
+      padding: 0.8rem;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 8px;
+      font-family: 'Manrope', sans-serif;
+      font-size: 0.9rem;
+      transition: all 0.3s;
+      background-color: white;
+    }
+
+    select:focus, input[type="text"]:focus {
+      outline: none;
+      border-color: #0a7c3a;
+      box-shadow: 0 0 0 3px rgba(10, 124, 58, 0.1);
+    }
+
+    .filter-actions {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .filter-status {
+      font-size: 0.85rem;
+      color: #666;
+      margin-top: 1rem;
+      padding: 0.8rem;
+      background-color: #f3f4f6;
+      border-radius: 6px;
+    }
+
+    /* TABS */
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      background: white;
+      border-radius: 12px 12px 0 0;
+      padding: 1rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      margin-bottom: 0;
+      overflow-x: auto;
+    }
+
+    .tab-btn {
+      padding: 0.8rem 1.6rem;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #999;
+      border-bottom: 3px solid transparent;
+      transition: all 0.3s;
+      font-family: 'Manrope', sans-serif;
+      white-space: nowrap;
+    }
+
+    .tab-btn.active {
+      color: #0a7c3a;
+      border-bottom-color: #0a7c3a;
+    }
+
+    .tab-btn:hover {
+      color: #0a7c3a;
+    }
+
+    .tab-content {
+      display: none;
+      background: white;
+      padding: 2rem;
+      border-radius: 0 0 12px 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* CHARTS */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(550px, 1fr));
+      gap: 2rem;
+    }
+
+    .chart-container {
+      position: relative;
+      height: 450px;
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1.5rem;
+    }
+
+    .chart-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chart-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #0a7c3a;
+      margin-bottom: 0.3rem;
+    }
+
+    .chart-desc {
+      font-size: 0.8rem;
+      color: #999;
+    }
+
+    .chart-badge {
+      background-color: #e8f5e9;
+      color: #0a7c3a;
+      padding: 0.4rem 0.8rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .chart-canvas-wrapper {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 350px;
+    }
+
+    /* MAP */
+    #map {
+      height: 700px;
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .map-legend {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1.5rem;
+      margin-top: 2rem;
+      padding: 1.5rem;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .legend-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+    }
+
+    /* PHOTOS */
+    .photos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .photo-card {
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .photo-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 8px 16px rgba(10,124,58,0.2);
+    }
+
+    .photo-image {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      background-color: #e5e7eb;
+    }
+
+    .photo-info {
+      padding: 1.2rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .photo-name {
+      font-weight: 700;
+      color: #0a7c3a;
+      margin-bottom: 0.4rem;
+      font-size: 0.95rem;
+    }
+
+    .photo-location {
+      color: #666;
+      font-size: 0.8rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .photo-woreda {
+      background: #e8f5e9;
+      color: #0a7c3a;
+      padding: 0.3rem 0.6rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      display: inline-block;
+    }
+
+    /* LIGHTBOX */
+    .lightbox {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.95);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .lightbox.active {
+      display: flex;
+    }
+
+    .lightbox-content {
+      max-width: 90%;
+      max-height: 90%;
+      position: relative;
+    }
+
+    .lightbox-image {
+      max-width: 100%;
+      max-height: 100%;
+      border-radius: 12px;
+    }
+
+    .lightbox-nav {
+      position: absolute;
+      top: 50%;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      transform: translateY(-50%);
+    }
+
+    .lightbox-nav button {
+      background-color: rgba(255,255,255,0.2);
+      color: white;
+      border: none;
+      padding: 1.2rem;
+      cursor: pointer;
+      font-size: 1.8rem;
+      border-radius: 8px;
+      transition: all 0.3s;
+    }
+
+    .lightbox-nav button:hover {
+      background-color: rgba(255,255,255,0.4);
+    }
+
+    .lightbox-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background-color: rgba(255,255,255,0.2);
+      color: white;
+      border: none;
+      padding: 0.8rem 1.2rem;
+      cursor: pointer;
+      border-radius: 8px;
+      font-size: 1.2rem;
+    }
+
+    /* DATA TABLE */
+    .table-section {
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .table-controls {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .table-search {
+      flex: 1;
+      min-width: 250px;
+    }
+
+    .table-exports {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    th {
+      background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+      padding: 1.2rem;
+      text-align: left;
+      font-weight: 700;
+      color: #0a7c3a;
+      border-bottom: 2px solid #d1d5db;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.3s;
+    }
+
+    th:hover {
+      background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
+    }
+
+    td {
+      padding: 1rem 1.2rem;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    tr:hover {
+      background-color: #f9fafb;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 0.4rem 0.8rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .status-completed {
+      background-color: #d1fae5;
+      color: #065f46;
+    }
+
+    .status-ongoing {
+      background-color: #fef3c7;
+      color: #92400e;
+    }
+
+    .status-suspended {
+      background-color: #fee2e2;
+      color: #991b1b;
+    }
+
+    .pagination {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-top: 2rem;
+    }
+
+    .pagination button {
+      padding: 0.6rem 1rem;
+      border: 1px solid #d1d5db;
+      background: white;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: all 0.3s;
+      font-weight: 500;
+    }
+
+    .pagination button:hover {
+      background-color: #f3f4f6;
+      border-color: #0a7c3a;
+    }
+
+    .pagination button.active {
+      background-color: #0a7c3a;
+      color: white;
+      border-color: #0a7c3a;
+    }
+
+    .table-info {
+      text-align: center;
+      margin-top: 1.5rem;
+      color: #666;
+      font-size: 0.9rem;
+    }
+
+    /* ALERTS */
+    .alert {
+      padding: 1.2rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-left: 4px solid;
+    }
+
+    .alert-error {
+      background-color: #fee2e2;
+      color: #991b1b;
+      border-left-color: #dc2626;
+    }
+
+    .alert-warning {
+      background-color: #fef3c7;
+      color: #92400e;
+      border-left-color: #f59e0b;
+    }
+
+    .alert-info {
+      background-color: #dbeafe;
+      color: #1e40af;
+      border-left-color: #3b82f6;
+    }
+
+    .alert-success {
+      background-color: #dcfce7;
+      color: #166534;
+      border-left-color: #16a34a;
+    }
+
+    .alert-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.2rem;
+      opacity: 0.7;
+      transition: opacity 0.3s;
+    }
+
+    .alert-close:hover {
+      opacity: 1;
+    }
+
+    /* MODALS */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      z-index: 999;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      padding: 2.5rem;
+      border-radius: 16px;
+      max-width: 550px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 25px rgba(0,0,0,0.15);
+    }
+
+    .modal-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      color: #0a7c3a;
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 0.6rem;
+      color: #333;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 0.9rem;
+      border: 1.5px solid #d1d5db;
+      border-radius: 8px;
+      font-family: 'Manrope', sans-serif;
+      font-size: 0.95rem;
+      transition: all 0.3s;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: #0a7c3a;
+      box-shadow: 0 0 0 3px rgba(10, 124, 58, 0.1);
+    }
+
+    .modal-buttons {
+      display: flex;
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+
+    .modal-buttons button {
+      flex: 1;
+    }
+
+    /* LOADING */
+    .loader {
+      border: 3px solid #f3f4f6;
+      border-top: 3px solid #0a7c3a;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.4);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+
+    .loading-overlay.active {
+      display: flex;
+    }
+
+    /* TOAST */
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background-color: #10b981;
+      color: white;
+      padding: 1.2rem 1.8rem;
+      border-radius: 8px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+      animation: slideIn 0.3s ease;
+      z-index: 1500;
+      font-weight: 500;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 1024px) {
+      .charts-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .filters-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 1rem;
+      }
+
+      .kpi-strip {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+      }
+
+      .kpi-value {
+        font-size: 1.5rem;
+      }
+
+      .photos-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      }
+
+      .filters-grid {
+        grid-template-columns: 1fr;
+      }
+
+      header {
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1rem;
+      }
+
+      .header-right {
+        width: 100%;
+        justify-content: space-around;
+      }
+
+      .tabs {
+        flex-wrap: wrap;
+        padding: 0.5rem;
+      }
+
+      .tab-btn {
+        padding: 0.6rem 1rem;
+        font-size: 0.85rem;
+      }
+
+      #map {
+        height: 500px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="header-left">
+    <div class="logo">D2</div>
+    <div class="header-title">
+      <h1>DRDIP-II Field Monitoring</h1>
+      <p>Live Dashboard - Somali Region BoA</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="status-pill">
+      <div class="status-dot" id="status-dot"></div>
+      <span id="status-text">Initializing...</span>
+    </div>
+    <div class="record-count" id="record-count">0 / 0 records</div>
+    <button class="btn btn-secondary btn-icon" id="export-pdf-btn" title="Export PDF Report">📄</button>
+    <button class="btn btn-secondary btn-icon" id="refresh-btn" title="Refresh Data">🔄</button>
+    <button class="btn btn-secondary btn-icon" id="settings-btn" title="Settings">⚙️</button>
+  </div>
+</header>
+
+<!-- MAIN CONTENT -->
+<div class="container">
+
+  <!-- ALERTS -->
+  <div id="alerts-container"></div>
+
+  <!-- KPI STRIP -->
+  <div class="kpi-strip">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Submissions</div>
+      <div class="kpi-value" id="kpi-total">0</div>
+      <div class="kpi-note">All recorded sites in Somali Region</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Completed</div>
+      <div class="kpi-value" id="kpi-completed">0</div>
+      <div class="kpi-note">Sub-projects delivered</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Beneficiaries</div>
+      <div class="kpi-value" id="kpi-beneficiaries">0</div>
+      <div class="kpi-note" id="kpi-benef-note">Host / Refugee</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Female Share</div>
+      <div class="kpi-value" id="kpi-female">0%</div>
+      <div class="kpi-note">Of beneficiaries</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Woredas</div>
+      <div class="kpi-value" id="kpi-woredas">0</div>
+      <div class="kpi-note">Active implementation</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Kebeles</div>
+      <div class="kpi-value" id="kpi-kebeles">0</div>
+      <div class="kpi-note">Coverage</div>
+    </div>
+  </div>
+
+  <!-- FILTERS -->
+  <div class="filters-section">
+    <div class="filters-label">Advanced Filters</div>
+    <div class="filters-grid">
+      <div class="filter-group">
+        <label>Woreda</label>
+        <select id="filter-woreda">
+          <option value="">All Woredas</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Kebele / Camp / Sub-Kebele</label>
+        <select id="filter-kebele">
+          <option value="">All Kebeles</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Component</label>
+        <select id="filter-component">
+          <option value="">All Components</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Sub-Component</label>
+        <select id="filter-subcomponent">
+          <option value="">All Sub-Components</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Work Type</label>
+        <select id="filter-worktype">
+          <option value="">All Work Types</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Status</label>
+        <select id="filter-status">
+          <option value="">All Statuses</option>
+        </select>
+      </div>
+      <div class="filter-group" style="grid-column: span 2;">
+        <label>Search</label>
+        <input type="text" id="filter-search" placeholder="Search by name, description...">
+      </div>
+    </div>
+    <div class="filter-actions">
+      <button class="btn btn-primary" id="clear-filters">Clear All Filters</button>
+    </div>
+    <div class="filter-status" id="filter-status-text"></div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="overview">📊 Overview</button>
+    <button class="tab-btn" data-tab="map">🗺️ Map View</button>
+    <button class="tab-btn" data-tab="photos">📷 Photos</button>
+    <button class="tab-btn" data-tab="table">📋 Data Table</button>
+    <button class="tab-btn" data-tab="analytics">📈 Advanced Analytics</button>
+  </div>
+
+  <!-- TAB: OVERVIEW -->
+  <div class="tab-content active" id="overview">
+    <div class="charts-grid">
+      <div class="chart-container">
+        <div class="chart-header">
+          <div class="chart-info">
+            <div class="chart-title">Implementation Status</div>
+            <div class="chart-desc">Distribution of sub-projects by implementation status</div>
+          </div>
+          <div class="chart-badge" id="status-count">0 Sites</div>
+        </div>
+        <div class="chart-canvas-wrapper">
+          <canvas id="chart-status"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-container">
+        <div class="chart-header">
+          <div class="chart-info">
+            <div class="chart-title">Top Woredas</div>
+            <div class="chart-desc">Submissions by woreda (Top 10)</div>
+          </div>
+          <div class="chart-badge" id="woredas-count">0 Woredas</div>
+        </div>
+        <div class="chart-canvas-wrapper">
+          <canvas id="chart-woreda"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-container">
+        <div class="chart-header">
+          <div class="chart-info">
+            <div class="chart-title">Component Distribution</div>
+            <div class="chart-desc">Projects by main component</div>
+          </div>
+          <div class="chart-badge" id="component-count">0 Components</div>
+        </div>
+        <div class="chart-canvas-wrapper">
+          <canvas id="chart-component"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-container">
+        <div class="chart-header">
+          <div class="chart-info">
+            <div class="chart-title">Sub-Component Breakdown</div>
+            <div class="chart-desc">Distribution across sub-components</div>
+          </div>
+          <div class="chart-badge" id="subcomponent-count">0 Sub-Components</div>
+        </div>
+        <div class="chart-canvas-wrapper">
+          <canvas id="chart-subcomponent"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-container" style="grid-column: 1 / -1;">
+        <div class="chart-header">
+          <div class="chart-info">
+            <div class="chart-title">Top Work Types</div>
+            <div class="chart-desc">Most common work types across all projects (Top 15)</div>
+          </div>
+          <div class="chart-badge" id="worktype-count">0 Types</div>
+        </div>
+        <div class="chart-canvas-wrapper">
+          <canvas id="chart-worktype"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: MAP -->
+  <div class="tab-content" id="map">
+    <div id="map"></div>
+    <div class="map-legend">
+      <div class="legend-item">
+        <div class="legend-dot" style="background-color: #10b981;"></div>
+        <span>Completed</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background-color: #f59e0b;"></div>
+        <span>Ongoing</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background-color: #ef4444;"></div>
+        <span>Suspended</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background-color: #9ca3af;"></div>
+        <span>Unknown Status</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background-color: #3b82f6;"></div>
+        <span>Cluster</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: PHOTOS -->
+  <div class="tab-content" id="photos">
+    <div class="photos-grid" id="photos-grid"></div>
+    <div style="text-align: center; margin-top: 2rem;">
+      <button class="btn btn-primary" id="load-more-photos" style="display: none;">Load More Photos</button>
+    </div>
+  </div>
+
+  <!-- TAB: TABLE -->
+  <div class="tab-content" id="table">
+    <div class="table-section">
+      <div class="table-controls">
+        <input type="text" class="table-search" id="table-search" placeholder="Search records...">
+        <div class="table-exports">
+          <button class="btn btn-secondary" id="export-csv">📥 CSV</button>
+          <button class="btn btn-secondary" id="export-json">📥 JSON</button>
+        </div>
+      </div>
+      <div style="overflow-x: auto;">
+        <table id="data-table">
+          <thead>
+            <tr>
+              <th data-sort="id">#</th>
+              <th data-sort="submitted">Submitted</th>
+              <th data-sort="woreda">Woreda</th>
+              <th data-sort="kebele">Kebele</th>
+              <th data-sort="component">Component</th>
+              <th data-sort="subcomponent">Sub-Component</th>
+              <th data-sort="worktype">Work Type</th>
+              <th data-sort="status">Status</th>
+              <th data-sort="beneficiaries">Beneficiaries</th>
+            </tr>
+          </thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="pagination"></div>
+      <div class="table-info" id="table-info"></div>
+    </div>
+  </div>
+
+  <!-- TAB: ANALYTICS -->
+  <div class="tab-content" id="analytics">
+    <div class="charts-grid">
+      <div class="chart-container" style="grid-column: 1 / -1;">
+        <div class="chart-header">
+          <div class="chart-info">
+            <div class="chart-title">Submissions Over Time</div>
+            <div class="chart-desc">Cumulative submissions by date - project progress tracking</div>
+          </div>
+        </div>
+        <div class="chart-canvas-wrapper">
+          <canvas id="chart-timeline"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-container">
+        <div class="chart-header">
+          <div class="chart-info">
+            <div class="chart-title">Host vs Refugee Beneficiaries</div>
+            <div class="chart-desc">Beneficiary composition by woreda</div>
+          </div>
+        </div>
+        <div class="chart-canvas-wrapper">
+          <canvas id="chart-host-refugee"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-container">
+        <div class="chart-header">
+          <div class="chart-info">
+            <div class="chart-title">Gender Composition</div>
+            <div class="chart-desc">Female vs male beneficiary distribution</div>
+          </div>
+        </div>
+        <div class="chart-canvas-wrapper">
+          <canvas id="chart-gender"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-container">
+        <div class="chart-header">
+          <div class="chart-info">
+            <div class="chart-title">Beneficiaries by Woreda</div>
+            <div class="chart-desc">Total beneficiary reach per woreda (Top 10)</div>
+          </div>
+        </div>
+        <div class="chart-canvas-wrapper">
+          <canvas id="chart-benef-woreda"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-container">
+        <div class="chart-header">
+          <div class="chart-info">
+            <div class="chart-title">Committee Establishment</div>
+            <div class="chart-desc">Percentage of sites with established committees</div>
+          </div>
+        </div>
+        <div class="chart-canvas-wrapper">
+          <canvas id="chart-committees"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-container">
+        <div class="chart-header">
+          <div class="chart-info">
+            <div class="chart-title">Component Effectiveness</div>
+            <div class="chart-desc">Completion rate by component</div>
+          </div>
+        </div>
+        <div class="chart-canvas-wrapper">
+          <canvas id="chart-effectiveness"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox">
+  <div class="lightbox-content">
+    <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+    <img id="lightbox-image" class="lightbox-image" src="" alt="Photo">
+    <div class="lightbox-nav">
+      <button onclick="prevPhoto()">❮</button>
+      <button onclick="nextPhoto()">❯</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal" id="settings-modal">
+  <div class="modal-content">
+    <div class="modal-title">Connection Settings</div>
+    <div class="form-group">
+      <label class="form-label">KoboToolbox API Token</label>
+      <input type="password" id="input-token" class="form-input" placeholder="Paste your token from KoboToolbox Account Settings">
+      <div style="font-size: 0.8rem; color: #999; margin-top: 0.5rem;">Get token from: Account Settings → Security → API Token</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Asset UID</label>
+      <input type="text" id="input-asset" class="form-input" value="aFPhq8BHNDSd2SBKUAbP4y">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Kobo Server URL</label>
+      <input type="text" id="input-server" class="form-input" value="https://kf.kobotoolbox.org">
+    </div>
+    <div class="modal-buttons">
+      <button class="btn btn-secondary" onclick="closeModal('settings-modal')">Cancel</button>
+      <button class="btn btn-primary" id="save-settings-btn">Save & Connect</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOADING OVERLAY -->
+<div class="loading-overlay" id="loading-overlay">
+  <div style="text-align: center;">
+    <div class="loader"></div>
+    <p style="color: white; margin-top: 1rem; font-weight: 500;">Loading data from KoboToolbox via secure proxy...</p>
+  </div>
+</div>
+
+<script>
+// ==================== CONFIG ====================
+const CONFIG = {
+  TOKEN: localStorage.getItem('kobo_token') || null,
+  KOBO_BASE: localStorage.getItem('kobo_server') || 'https://kf.kobotoolbox.org',
+  ASSET_UID: localStorage.getItem('asset_uid') || 'aFPhq8BHNDSd2SBKUAbP4y',
+  PROXY_URL: 'https://drdip-ii-kobo-proxy.vercel.app/api/kobo-proxy',
+  REGION_FILTER: 'Somali'
+};
+
+let ALL_DATA = [];
+let FILTERED_DATA = [];
+let CHARTS = {};
+let CURRENT_LIGHTBOX_INDEX = 0;
+let PHOTOS_LOADED = 0;
+let ALL_PHOTOS = [];
+let MAP_INSTANCE = null;
+let MARKER_CLUSTER = null;
+
+// Field name aliases for flexibility
+const FIELD_ALIASES = {
+  'id': ['_id', 'ID'],
+  'submitted': ['_submission_time', 'submission_time'],
+  'woreda': ['woreda', 'Woreda', 'WOREDA', 'district'],
+  'kebele': ['kebele', 'Kebele', 'KEBELE', 'kebele_camp_sub', 'camp', 'sub_kebele'],
+  'component': ['component', 'Component', 'COMPONENT', 'Project_Component', 'project_component'],
+  'subcomponent': ['sub_component', 'Sub_Component', 'subcomponent', 'sub_project', 'Sub_Project'],
+  'worktype': ['work_type', 'Work_Type', 'WORK_TYPE', 'work_category', 'activity_type'],
+  'status': ['status', 'Status', 'STATUS', 'Status_of_the'],
+  'beneficiaries': ['benef_tot', 'benef_total', 'total_beneficiaries'],
+  'female': ['female_benef', 'female_total', 'female_beneficiaries'],
+  'male': ['male_benef', 'male_total', 'male_beneficiaries'],
+  'host': ['host_total', 'host_beneficiaries'],
+  'refugee': ['refu_total', 'refugee_beneficiaries'],
+  'name': ['localName', 'Local_name', 'name', 'project_name'],
+  'cpmc': ['CPMC_establishment', 'cpmc_est'],
+  'cpc': ['CPC_establishment', 'cpc_est'],
+  'sauc': ['SAuC_establishment', 'sauc_est'],
+  'kdc': ['KDC_establishment', 'kdc_est'],
+  'geolocation': ['_geolocation', 'geolocation', 'gps'],
+  'photos': ['_attachments', 'photos', 'attachments']
+};
+
+// ==================== INITIALIZATION ====================
+document.addEventListener('DOMContentLoaded', () => {
+  initializeSettings();
+  setupEventListeners();
+  if (CONFIG.TOKEN) {
+    loadData();
+  } else {
+    openModal('settings-modal');
+  }
+});
+
+function initializeSettings() {
+  document.getElementById('input-token').value = CONFIG.TOKEN || '';
+  document.getElementById('input-asset').value = CONFIG.ASSET_UID;
+  document.getElementById('input-server').value = CONFIG.KOBO_BASE;
+}
+
+function setupEventListeners() {
+  // Settings
+  document.getElementById('settings-btn').addEventListener('click', () => openModal('settings-modal'));
+  document.getElementById('save-settings-btn').addEventListener('click', saveSettings);
+
+  // Filters
+  document.getElementById('clear-filters').addEventListener('click', clearFilters);
+  document.getElementById('filter-woreda').addEventListener('change', applyFilters);
+  document.getElementById('filter-kebele').addEventListener('change', applyFilters);
+  document.getElementById('filter-component').addEventListener('change', applyFilters);
+  document.getElementById('filter-subcomponent').addEventListener('change', applyFilters);
+  document.getElementById('filter-worktype').addEventListener('change', applyFilters);
+  document.getElementById('filter-status').addEventListener('change', applyFilters);
+  document.getElementById('filter-search').addEventListener('input', applyFilters);
+
+  // Tabs
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      e.target.classList.add('active');
+      const tab = e.target.getAttribute('data-tab');
+      document.getElementById(tab).classList.add('active');
+      if (tab === 'map' && !MAP_INSTANCE) {
+        setTimeout(() => renderMap(), 100);
+      }
+    });
+  });
+
+  // Export
+  document.getElementById('export-pdf-btn').addEventListener('click', exportPDF);
+  document.getElementById('export-csv').addEventListener('click', exportCSV);
+  document.getElementById('export-json').addEventListener('click', exportJSON);
+
+  // Refresh
+  document.getElementById('refresh-btn').addEventListener('click', loadData);
+
+  // Table
+  document.getElementById('table-search').addEventListener('input', renderTable);
+  document.querySelectorAll('th[data-sort]').forEach(th => {
+    th.addEventListener('click', () => sortTable(th.getAttribute('data-sort')));
+  });
+
+  // Photos
+  document.getElementById('load-more-photos').addEventListener('click', () => {
+    PHOTOS_LOADED += 24;
+    renderPhotos();
+  });
+}
+
+// ==================== DATA LOADING VIA PROXY ====================
+async function loadData() {
+  try {
+    setLoading(true);
+    updateStatus('Connecting via proxy...', false);
+    
+    // Build request to Vercel proxy
+    const params = new URLSearchParams({
+      token: CONFIG.TOKEN,
+      server: CONFIG.KOBO_BASE,
+      asset: CONFIG.ASSET_UID
+    });
+
+    const response = await fetch(`${CONFIG.PROXY_URL}?${params}`);
+    
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || err.message || `HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    ALL_DATA = data.results || data;
+
+    // FILTER TO SOMALI REGION ONLY
+    ALL_DATA = ALL_DATA.filter(record => {
+      const region = detectField(record, FIELD_ALIASES['woreda']);
+      return region && (region.toLowerCase().includes('somali') || region.toLowerCase().includes('filtu') || region.toLowerCase().includes('kismayo'));
+    });
+
+    updateStatus('Connected via proxy', true);
+    applyFilters();
+    showAlert('success', `✓ Loaded ${ALL_DATA.length} records from Somali Region via secure proxy`);
+  } catch (error) {
+    updateStatus('Proxy connection failed', false);
+    showAlert('error', `Error: ${error.message}`);
+    console.error('Proxy error:', error);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function applyFilters() {
+  FILTERED_DATA = [...ALL_DATA];
+
+  const woreda = document.getElementById('filter-woreda').value;
+  const kebele = document.getElementById('filter-kebele').value;
+  const component = document.getElementById('filter-component').value;
+  const subcomponent = document.getElementById('filter-subcomponent').value;
+  const worktype = document.getElementById('filter-worktype').value;
+  const status = document.getElementById('filter-status').value;
+  const search = document.getElementById('filter-search').value.toLowerCase();
+
+  if (woreda) FILTERED_DATA = FILTERED_DATA.filter(r => detectField(r, FIELD_ALIASES['woreda']) === woreda);
+  if (kebele) FILTERED_DATA = FILTERED_DATA.filter(r => detectField(r, FIELD_ALIASES['kebele']) === kebele);
+  if (component) FILTERED_DATA = FILTERED_DATA.filter(r => detectField(r, FIELD_ALIASES['component']) === component);
+  if (subcomponent) FILTERED_DATA = FILTERED_DATA.filter(r => detectField(r, FIELD_ALIASES['subcomponent']) === subcomponent);
+  if (worktype) FILTERED_DATA = FILTERED_DATA.filter(r => detectField(r, FIELD_ALIASES['worktype']) === worktype);
+  if (status) FILTERED_DATA = FILTERED_DATA.filter(r => detectField(r, FIELD_ALIASES['status']) === status);
+  
+  if (search) {
+    FILTERED_DATA = FILTERED_DATA.filter(r => {
+      const text = [
+        detectField(r, FIELD_ALIASES['name']),
+        detectField(r, FIELD_ALIASES['kebele']),
+        detectField(r, FIELD_ALIASES['woreda']),
+        detectField(r, FIELD_ALIASES['component'])
+      ].join(' ').toLowerCase();
+      return text.includes(search);
+    });
+  }
+
+  updateKPIs();
+  updateFilterOptions();
+  updateFilterStatus();
+  renderCharts();
+  renderTable();
+  renderPhotos();
+
+  document.getElementById('record-count').textContent = `${FILTERED_DATA.length} of ${ALL_DATA.length} records`;
+}
+
+function clearFilters() {
+  document.getElementById('filter-woreda').value = '';
+  document.getElementById('filter-kebele').value = '';
+  document.getElementById('filter-component').value = '';
+  document.getElementById('filter-subcomponent').value = '';
+  document.getElementById('filter-worktype').value = '';
+  document.getElementById('filter-status').value = '';
+  document.getElementById('filter-search').value = '';
+  PHOTOS_LOADED = 0;
+  applyFilters();
+}
+
+// ==================== KPI CALCULATIONS ====================
+function updateKPIs() {
+  const total = FILTERED_DATA.length;
+  const completed = FILTERED_DATA.filter(r => detectField(r, FIELD_ALIASES['status']) === 'Completed').length;
+  
+  let totalBenef = 0, femaleBenef = 0, hostBenef = 0, refBenef = 0;
+  FILTERED_DATA.forEach(r => {
+    totalBenef += parseInt(detectField(r, FIELD_ALIASES['beneficiaries']) || 0);
+    femaleBenef += parseInt(detectField(r, FIELD_ALIASES['female']) || 0);
+    hostBenef += parseInt(detectField(r, FIELD_ALIASES['host']) || 0);
+    refBenef += parseInt(detectField(r, FIELD_ALIASES['refugee']) || 0);
+  });
+
+  const femalePercent = totalBenef > 0 ? Math.round((femaleBenef / totalBenef) * 100) : 0;
+  const woredas = new Set(FILTERED_DATA.map(r => detectField(r, FIELD_ALIASES['woreda']))).size;
+  const kebeles = new Set(FILTERED_DATA.map(r => detectField(r, FIELD_ALIASES['kebele']))).size;
+
+  document.getElementById('kpi-total').textContent = total.toLocaleString();
+  document.getElementById('kpi-completed').textContent = completed.toLocaleString();
+  document.getElementById('kpi-beneficiaries').textContent = totalBenef.toLocaleString();
+  document.getElementById('kpi-benef-note').textContent = `Host ${hostBenef.toLocaleString()} / Refugee ${refBenef.toLocaleString()}`;
+  document.getElementById('kpi-female').textContent = femalePercent + '%';
+  document.getElementById('kpi-woredas').textContent = woredas;
+  document.getElementById('kpi-kebeles').textContent = kebeles;
+}
+
+function updateFilterOptions() {
+  const uniqueWoredas = [...new Set(FILTERED_DATA.map(r => detectField(r, FIELD_ALIASES['woreda'])))].filter(Boolean).sort();
+  const uniqueKebeles = [...new Set(FILTERED_DATA.map(r => detectField(r, FIELD_ALIASES['kebele'])))].filter(Boolean).sort();
+  const uniqueComponents = [...new Set(FILTERED_DATA.map(r => detectField(r, FIELD_ALIASES['component'])))].filter(Boolean).sort();
+  const uniqueSubcomponents = [...new Set(FILTERED_DATA.map(r => detectField(r, FIELD_ALIASES['subcomponent'])))].filter(Boolean).sort();
+  const uniqueWorktypes = [...new Set(FILTERED_DATA.map(r => detectField(r, FIELD_ALIASES['worktype'])))].filter(Boolean).sort();
+  const uniqueStatuses = [...new Set(FILTERED_DATA.map(r => detectField(r, FIELD_ALIASES['status'])))].filter(Boolean).sort();
+
+  updateSelect('filter-woreda', uniqueWoredas);
+  updateSelect('filter-kebele', uniqueKebeles);
+  updateSelect('filter-component', uniqueComponents);
+  updateSelect('filter-subcomponent', uniqueSubcomponents);
+  updateSelect('filter-worktype', uniqueWorktypes);
+  updateSelect('filter-status', uniqueStatuses);
+}
+
+function updateSelect(selectId, options) {
+  const select = document.getElementById(selectId);
+  const current = select.value;
+  const label = selectId.split('-')[1];
+  const labels = {
+    'woreda': 'All Woredas',
+    'kebele': 'All Kebeles',
+    'component': 'All Components',
+    'subcomponent': 'All Sub-Components',
+    'worktype': 'All Work Types',
+    'status': 'All Statuses'
+  };
+  select.innerHTML = `<option value="">${labels[label] || 'All'}</option>`;
+  options.forEach(opt => {
+    const option = document.createElement('option');
+    option.value = opt;
+    option.textContent = opt;
+    select.appendChild(option);
+  });
+  select.value = current;
+}
+
+function updateFilterStatus() {
+  const count = FILTERED_DATA.length;
+  const total = ALL_DATA.length;
+  const percent = total > 0 ? Math.round((count / total) * 100) : 0;
+  document.getElementById('filter-status-text').textContent = `Showing ${count} of ${total} records (${percent}%)`;
+}
+
+// ==================== CHARTS ====================
+function renderCharts() {
+  renderStatusChart();
+  renderWoredaChart();
+  renderComponentChart();
+  renderSubcomponentChart();
+  renderWorktypeChart();
+  renderTimelineChart();
+  renderHostRefugeeChart();
+  renderGenderChart();
+  renderBenefWoredaChart();
+  renderCommitteesChart();
+  renderEffectivenessChart();
+}
+
+function renderStatusChart() {
+  const statusCounts = {};
+  FILTERED_DATA.forEach(r => {
+    const s = detectField(r, FIELD_ALIASES['status']) || 'Unknown';
+    statusCounts[s] = (statusCounts[s] || 0) + 1;
+  });
+
+  document.getElementById('status-count').textContent = `${FILTERED_DATA.length} Sites`;
+
+  const ctx = document.getElementById('chart-status').getContext('2d');
+  destroyChart('chart-status');
+  CHARTS['chart-status'] = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(statusCounts),
+      datasets: [{
+        data: Object.values(statusCounts),
+        backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#9ca3af'],
+        borderColor: 'white',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { padding: 15, font: { size: 12 } } },
+        tooltip: { callbacks: { label: (context) => `${context.label}: ${context.parsed}` } }
+      }
+    }
+  });
+}
+
+function renderWoredaChart() {
+  const woredaCounts = {};
+  FILTERED_DATA.forEach(r => {
+    const w = detectField(r, FIELD_ALIASES['woreda']) || 'Unknown';
+    woredaCounts[w] = (woredaCounts[w] || 0) + 1;
+  });
+  
+  const sorted = Object.entries(woredaCounts).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  document.getElementById('woredas-count').textContent = `${Object.keys(woredaCounts).length} Woredas`;
+  
+  const ctx = document.getElementById('chart-woreda').getContext('2d');
+  destroyChart('chart-woreda');
+  CHARTS['chart-woreda'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: sorted.map(([w]) => w),
+      datasets: [{
+        label: 'Submissions',
+        data: sorted.map(([, c]) => c),
+        backgroundColor: '#0a7c3a',
+        borderRadius: 8,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (context) => `${context.parsed.x} submissions` } }
+      },
+      scales: {
+        x: { beginAtZero: true, ticks: { stepSize: 1 } }
+      }
+    }
+  });
+}
+
+function renderComponentChart() {
+  const componentCounts = {};
+  FILTERED_DATA.forEach(r => {
+    const c = detectField(r, FIELD_ALIASES['component']) || 'Unknown';
+    componentCounts[c] = (componentCounts[c] || 0) + 1;
+  });
+
+  document.getElementById('component-count').textContent = `${Object.keys(componentCounts).length} Components`;
+
+  const ctx = document.getElementById('chart-component').getContext('2d');
+  destroyChart('chart-component');
+  CHARTS['chart-component'] = new Chart(ctx, {
+    type: 'pie',
+    data: {
+      labels: Object.keys(componentCounts),
+      datasets: [{
+        data: Object.values(componentCounts),
+        backgroundColor: ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'],
+        borderColor: 'white',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { padding: 15, font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+function renderSubcomponentChart() {
+  const subcompCounts = {};
+  FILTERED_DATA.forEach(r => {
+    const sc = detectField(r, FIELD_ALIASES['subcomponent']) || 'Unknown';
+    subcompCounts[sc] = (subcompCounts[sc] || 0) + 1;
+  });
+
+  document.getElementById('subcomponent-count').textContent = `${Object.keys(subcompCounts).length} Sub-Components`;
+
+  const sorted = Object.entries(subcompCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+
+  const ctx = document.getElementById('chart-subcomponent').getContext('2d');
+  destroyChart('chart-subcomponent');
+  CHARTS['chart-subcomponent'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: sorted.map(([sc]) => sc),
+      datasets: [{
+        label: 'Count',
+        data: sorted.map(([, c]) => c),
+        backgroundColor: '#06b6d4',
+        borderRadius: 8
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true } }
+    }
+  });
+}
+
+function renderWorktypeChart() {
+  const worktypeCounts = {};
+  FILTERED_DATA.forEach(r => {
+    const wt = detectField(r, FIELD_ALIASES['worktype']) || 'Unknown';
+    worktypeCounts[wt] = (worktypeCounts[wt] || 0) + 1;
+  });
+
+  const sorted = Object.entries(worktypeCounts).sort((a, b) => b[1] - a[1]).slice(0, 15);
+  document.getElementById('worktype-count').textContent = `${Object.keys(worktypeCounts).length} Types`;
+
+  const ctx = document.getElementById('chart-worktype').getContext('2d');
+  destroyChart('chart-worktype');
+  CHARTS['chart-worktype'] = new Chart(ctx, {
+    type: 'barH',
+    data: {
+      labels: sorted.map(([wt]) => wt.substring(0, 30)),
+      datasets: [{
+        label: 'Count',
+        data: sorted.map(([, c]) => c),
+        backgroundColor: '#f59e0b',
+        borderRadius: 8
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { beginAtZero: true } }
+    }
+  });
+}
+
+function renderTimelineChart() {
+  const timeline = {};
+  FILTERED_DATA.forEach(r => {
+    const date = detectField(r, FIELD_ALIASES['submitted']) || '';
+    const dateOnly = date.split('T')[0];
+    if (dateOnly) timeline[dateOnly] = (timeline[dateOnly] || 0) + 1;
+  });
+
+  const sorted = Object.entries(timeline).sort();
+  const cumulative = [];
+  let sum = 0;
+  sorted.forEach(([, count]) => {
+    sum += count;
+    cumulative.push(sum);
+  });
+
+  const ctx = document.getElementById('chart-timeline').getContext('2d');
+  destroyChart('chart-timeline');
+  CHARTS['chart-timeline'] = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: sorted.map(([d]) => d),
+      datasets: [{
+        label: 'Cumulative Submissions',
+        data: cumulative,
+        borderColor: '#0a7c3a',
+        backgroundColor: 'rgba(10, 124, 58, 0.1)',
+        borderWidth: 3,
+        fill: true,
+        tension: 0.4,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        pointBackgroundColor: '#0a7c3a'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, labels: { padding: 15 } },
+        tooltip: { callbacks: { label: (context) => `${context.parsed.y} total` } }
+      },
+      scales: {
+        y: { beginAtZero: true }
+      }
+    }
+  });
+}
+
+function renderHostRefugeeChart() {
+  const woredaCounts = {};
+  FILTERED_DATA.forEach(r => {
+    const w = detectField(r, FIELD_ALIASES['woreda']) || 'Unknown';
+    const host = parseInt(detectField(r, FIELD_ALIASES['host']) || 0);
+    const ref = parseInt(detectField(r, FIELD_ALIASES['refugee']) || 0);
+    if (!woredaCounts[w]) woredaCounts[w] = { host: 0, ref: 0 };
+    woredaCounts[w].host += host;
+    woredaCounts[w].ref += ref;
+  });
+
+  const sorted = Object.entries(woredaCounts).sort((a, b) => (b[1].host + b[1].ref) - (a[1].host + a[1].ref)).slice(0, 8);
+
+  const ctx = document.getElementById('chart-host-refugee').getContext('2d');
+  destroyChart('chart-host-refugee');
+  CHARTS['chart-host-refugee'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: sorted.map(([w]) => w),
+      datasets: [
+        {
+          label: 'Host',
+          data: sorted.map(([, d]) => d.host),
+          backgroundColor: '#3b82f6'
+        },
+        {
+          label: 'Refugee',
+          data: sorted.map(([, d]) => d.ref),
+          backgroundColor: '#ef4444'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { stacked: true },
+        y: { stacked: true, beginAtZero: true }
+      }
+    }
+  });
+}
+
+function renderGenderChart() {
+  let female = 0, male = 0;
+  FILTERED_DATA.forEach(r => {
+    female += parseInt(detectField(r, FIELD_ALIASES['female']) || 0);
+    male += parseInt(detectField(r, FIELD_ALIASES['male']) || 0);
+  });
+
+  const ctx = document.getElementById('chart-gender').getContext('2d');
+  destroyChart('chart-gender');
+  CHARTS['chart-gender'] = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Female', 'Male'],
+      datasets: [{
+        data: [female, male],
+        backgroundColor: ['#ec4899', '#3b82f6'],
+        borderColor: 'white',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { padding: 15 } },
+        tooltip: { callbacks: { label: (context) => `${context.label}: ${context.parsed.toLocaleString()}` } }
+      }
+    }
+  });
+}
+
+function renderBenefWoredaChart() {
+  const woredaBenef = {};
+  FILTERED_DATA.forEach(r => {
+    const w = detectField(r, FIELD_ALIASES['woreda']) || 'Unknown';
+    const b = parseInt(detectField(r, FIELD_ALIASES['beneficiaries']) || 0);
+    woredaBenef[w] = (woredaBenef[w] || 0) + b;
+  });
+
+  const sorted = Object.entries(woredaBenef).sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+  const ctx = document.getElementById('chart-benef-woreda').getContext('2d');
+  destroyChart('chart-benef-woreda');
+  CHARTS['chart-benef-woreda'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: sorted.map(([w]) => w),
+      datasets: [{
+        label: 'Beneficiaries',
+        data: sorted.map(([, b]) => b),
+        backgroundColor: '#8b5cf6',
+        borderRadius: 8
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true } }
+    }
+  });
+}
+
+function renderCommitteesChart() {
+  let cpmc = 0, cpc = 0, sauc = 0, kdc = 0;
+  FILTERED_DATA.forEach(r => {
+    if (detectField(r, FIELD_ALIASES['cpmc']) === 'Yes') cpmc++;
+    if (detectField(r, FIELD_ALIASES['cpc']) === 'Yes') cpc++;
+    if (detectField(r, FIELD_ALIASES['sauc']) === 'Yes') sauc++;
+    if (detectField(r, FIELD_ALIASES['kdc']) === 'Yes') kdc++;
+  });
+
+  const total = FILTERED_DATA.length || 1;
+  const ctx = document.getElementById('chart-committees').getContext('2d');
+  destroyChart('chart-committees');
+  CHARTS['chart-committees'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['CPMC', 'CPC', 'SAuC', 'KDC'],
+      datasets: [{
+        label: '% Established',
+        data: [
+          Math.round((cpmc / total) * 100),
+          Math.round((cpc / total) * 100),
+          Math.round((sauc / total) * 100),
+          Math.round((kdc / total) * 100)
+        ],
+        backgroundColor: ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b']
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, max: 100 } }
+    }
+  });
+}
+
+function renderEffectivenessChart() {
+  const componentStatus = {};
+  FILTERED_DATA.forEach(r => {
+    const c = detectField(r, FIELD_ALIASES['component']) || 'Unknown';
+    const s = detectField(r, FIELD_ALIASES['status']) || 'Unknown';
+    if (!componentStatus[c]) componentStatus[c] = { completed: 0, total: 0 };
+    componentStatus[c].total++;
+    if (s === 'Completed') componentStatus[c].completed++;
+  });
+
+  const data = Object.entries(componentStatus).map(([comp, counts]) => ({
+    component: comp,
+    rate: Math.round((counts.completed / counts.total) * 100)
+  })).sort((a, b) => b.rate - a.rate);
+
+  const ctx = document.getElementById('chart-effectiveness').getContext('2d');
+  destroyChart('chart-effectiveness');
+  CHARTS['chart-effectiveness'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: data.map(d => d.component),
+      datasets: [{
+        label: 'Completion Rate (%)',
+        data: data.map(d => d.rate),
+        backgroundColor: '#06b6d4',
+        borderRadius: 8
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, max: 100 } }
+    }
+  });
+}
+
+function destroyChart(chartId) {
+  if (CHARTS[chartId]) {
+    CHARTS[chartId].destroy();
+    delete CHARTS[chartId];
+  }
+}
+
+// ==================== MAP ====================
+function renderMap() {
+  if (MAP_INSTANCE) MAP_INSTANCE.remove();
+
+  const center = [5.5833, 46.8012];
+  MAP_INSTANCE = L.map('map').setView(center, 7);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors',
+    maxZoom: 19
+  }).addTo(MAP_INSTANCE);
+
+  MARKER_CLUSTER = L.markerClusterGroup();
+
+  const statusColors = {
+    'Completed': '#10b981',
+    'Ongoing': '#f59e0b',
+    'Suspended': '#ef4444'
+  };
+
+  FILTERED_DATA.forEach(record => {
+    const geo = detectField(record, FIELD_ALIASES['geolocation']);
+    if (geo && Array.isArray(geo) && geo.length === 2) {
+      const [lat, lng] = geo;
+      const status = detectField(record, FIELD_ALIASES['status']) || 'Unknown';
+      const color = statusColors[status] || '#9ca3af';
+
+      const marker = L.circleMarker([lat, lng], {
+        radius: 8,
+        fillColor: color,
+        color: color,
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 0.8
+      });
+
+      const name = detectField(record, FIELD_ALIASES['name']) || 'Unnamed';
+      const woreda = detectField(record, FIELD_ALIASES['woreda']) || '';
+      const kebele = detectField(record, FIELD_ALIASES['kebele']) || '';
+      const component = detectField(record, FIELD_ALIASES['component']) || '';
+      const worktype = detectField(record, FIELD_ALIASES['worktype']) || '';
+      const benef = detectField(record, FIELD_ALIASES['beneficiaries']) || 0;
+      const photos = record._attachments && record._attachments.length > 0 ? `<br><img src="${record._attachments[0].download_url}" style="max-width: 200px; margin-top: 0.5rem; border-radius: 6px;">` : '';
+
+      marker.bindPopup(`
+        <div style="font-size: 12px;">
+          <strong style="color: #0a7c3a; font-size: 14px;">${name}</strong><br>
+          <span style="color: #666;"><strong>Woreda:</strong> ${woreda}</span><br>
+          <span style="color: #666;"><strong>Kebele:</strong> ${kebele}</span><br>
+          <span style="color: #666;"><strong>Component:</strong> ${component}</span><br>
+          <span style="color: #666;"><strong>Work Type:</strong> ${worktype}</span><br>
+          <span style="color: #666;"><strong>Status:</strong> <span style="background: ${color}; color: white; padding: 2px 6px; border-radius: 3px;">${status}</span></span><br>
+          <span style="color: #666;"><strong>Beneficiaries:</strong> ${benef}</span>
+          ${photos}
+        </div>
+      `, { maxWidth: 250 });
+
+      MARKER_CLUSTER.addLayer(marker);
+    }
+  });
+
+  MAP_INSTANCE.addLayer(MARKER_CLUSTER);
+}
+
+// ==================== PHOTOS ====================
+function renderPhotos() {
+  ALL_PHOTOS = [];
+  FILTERED_DATA.forEach(record => {
+    const photos = detectField(record, FIELD_ALIASES['photos']);
+    if (photos && Array.isArray(photos)) {
+      photos.forEach(photo => {
+        ALL_PHOTOS.push({
+          url: photo.download_url,
+          name: detectField(record, FIELD_ALIASES['name']) || 'Unnamed',
+          woreda: detectField(record, FIELD_ALIASES['woreda']) || '',
+          kebele: detectField(record, FIELD_ALIASES['kebele']) || '',
+          component: detectField(record, FIELD_ALIASES['component']) || ''
+        });
+      });
+    }
+  });
+
+  const photosToShow = ALL_PHOTOS.slice(0, PHOTOS_LOADED + 24);
+  const html = photosToShow.map((photo, idx) => `
+    <div class="photo-card" onclick="openLightbox(${idx})">
+      <img src="${photo.url}" class="photo-image" alt="Photo" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 fill=%22%23e5e7eb%22/%3E%3C/svg%3E'">
+      <div class="photo-info">
+        <div class="photo-name">${photo.name}</div>
+        <div class="photo-location">${photo.kebele ? photo.kebele + ' / ' : ''}${photo.woreda}</div>
+        <div style="margin-top: 0.6rem;">
+          <span class="photo-woreda">${photo.component}</span>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('photos-grid').innerHTML = html;
+  document.getElementById('load-more-photos').style.display = PHOTOS_LOADED + 24 < ALL_PHOTOS.length ? 'inline-block' : 'none';
+}
+
+function openLightbox(idx) {
+  CURRENT_LIGHTBOX_INDEX = idx;
+  document.getElementById('lightbox-image').src = ALL_PHOTOS[idx].url;
+  document.getElementById('lightbox').classList.add('active');
+}
+
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+}
+
+function prevPhoto() {
+  CURRENT_LIGHTBOX_INDEX = (CURRENT_LIGHTBOX_INDEX - 1 + ALL_PHOTOS.length) % ALL_PHOTOS.length;
+  document.getElementById('lightbox-image').src = ALL_PHOTOS[CURRENT_LIGHTBOX_INDEX].url;
+}
+
+function nextPhoto() {
+  CURRENT_LIGHTBOX_INDEX = (CURRENT_LIGHTBOX_INDEX + 1) % ALL_PHOTOS.length;
+  document.getElementById('lightbox-image').src = ALL_PHOTOS[CURRENT_LIGHTBOX_INDEX].url;
+}
+
+// ==================== DATA TABLE ====================
+let TABLE_SORT_COLUMN = 'id';
+let TABLE_SORT_ASC = true;
+let TABLE_PAGE = 0;
+const TABLE_ROWS_PER_PAGE = 25;
+
+function renderTable() {
+  let data = FILTERED_DATA;
+  const search = document.getElementById('table-search').value.toLowerCase();
+  
+  if (search) {
+    data = data.filter(r => {
+      const text = [
+        detectField(r, FIELD_ALIASES['name']),
+        detectField(r, FIELD_ALIASES['woreda']),
+        detectField(r, FIELD_ALIASES['kebele']),
+        detectField(r, FIELD_ALIASES['component']),
+        detectField(r, FIELD_ALIASES['worktype']),
+        detectField(r, FIELD_ALIASES['status'])
+      ].join(' ').toLowerCase();
+      return text.includes(search);
+    });
+  }
+
+  data.sort((a, b) => {
+    let aVal = detectField(a, FIELD_ALIASES[TABLE_SORT_COLUMN] || [TABLE_SORT_COLUMN]);
+    let bVal = detectField(b, FIELD_ALIASES[TABLE_SORT_COLUMN] || [TABLE_SORT_COLUMN]);
+    
+    if (typeof aVal === 'string') {
+      aVal = aVal.toLowerCase();
+      bVal = bVal.toLowerCase();
+    } else {
+      aVal = aVal || 0;
+      bVal = bVal || 0;
+    }
+
+    const result = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+    return TABLE_SORT_ASC ? result : -result;
+  });
+
+  const total = data.length;
+  const maxPage = Math.ceil(total / TABLE_ROWS_PER_PAGE);
+  TABLE_PAGE = Math.min(TABLE_PAGE, maxPage - 1);
+  
+  const start = TABLE_PAGE * TABLE_ROWS_PER_PAGE;
+  const pageData = data.slice(start, start + TABLE_ROWS_PER_PAGE);
+
+  const tbody = document.getElementById('table-body');
+  tbody.innerHTML = pageData.map((r, idx) => {
+    const status = detectField(r, FIELD_ALIASES['status']) || '';
+    const statusClass = status === 'Completed' ? 'status-completed' : status === 'Ongoing' ? 'status-ongoing' : status === 'Suspended' ? 'status-suspended' : '';
+    
+    return `
+    <tr>
+      <td>${r._id || ''}</td>
+      <td>${detectField(r, FIELD_ALIASES['submitted']).split('T')[0] || ''}</td>
+      <td>${detectField(r, FIELD_ALIASES['woreda']) || ''}</td>
+      <td>${detectField(r, FIELD_ALIASES['kebele']) || ''}</td>
+      <td>${detectField(r, FIELD_ALIASES['component']) || ''}</td>
+      <td>${detectField(r, FIELD_ALIASES['subcomponent']) || ''}</td>
+      <td>${detectField(r, FIELD_ALIASES['worktype']) || ''}</td>
+      <td><span class="status-badge ${statusClass}">${status}</span></td>
+      <td>${detectField(r, FIELD_ALIASES['beneficiaries']) || 0}</td>
+    </tr>
+  `;
+  }).join('');
+
+  const pagination = document.getElementById('pagination');
+  let pageHtml = '';
+  for (let i = 0; i < maxPage; i++) {
+    pageHtml += `<button class="btn ${i === TABLE_PAGE ? 'btn-primary active' : 'btn-secondary'}" onclick="TABLE_PAGE=${i}; renderTable();">${i + 1}</button>`;
+  }
+  pagination.innerHTML = pageHtml;
+
+  document.getElementById('table-info').textContent = `Showing ${start + 1} to ${Math.min(start + TABLE_ROWS_PER_PAGE, total)} of ${total} records`;
+}
+
+function sortTable(column) {
+  if (TABLE_SORT_COLUMN === column) {
+    TABLE_SORT_ASC = !TABLE_SORT_ASC;
+  } else {
+    TABLE_SORT_COLUMN = column;
+    TABLE_SORT_ASC = true;
+  }
+  TABLE_PAGE = 0;
+  renderTable();
+}
+
+// ==================== EXPORTS ====================
+async function exportPDF() {
+  setLoading(true);
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'mm', 'a4');
+
+    doc.setFontSize(24);
+    doc.setTextColor(10, 124, 58);
+    doc.text('DRDIP-II Field Monitoring Report', 20, 30);
+    
+    doc.setFontSize(12);
+    doc.setTextColor(100, 100, 100);
+    doc.text('Somali Region Bureau of Agriculture', 20, 45);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 20, 55);
+    doc.text(`Records Shown: ${FILTERED_DATA.length} of ${ALL_DATA.length}`, 20, 65);
+
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Total Beneficiaries: ${FILTERED_DATA.reduce((sum, r) => sum + parseInt(detectField(r, FIELD_ALIASES['beneficiaries']) || 0), 0).toLocaleString()}`, 20, 85);
+    doc.text(`Woredas: ${new Set(FILTERED_DATA.map(r => detectField(r, FIELD_ALIASES['woreda']))).size}`, 20, 95);
+    doc.text(`Kebeles: ${new Set(FILTERED_DATA.map(r => detectField(r, FIELD_ALIASES['kebele']))).size}`, 20, 105);
+
+    doc.addPage();
+    doc.setFontSize(14);
+    doc.setTextColor(10, 124, 58);
+    doc.text('Top 25 Submissions', 20, 20);
+    
+    const tableData = FILTERED_DATA.slice(0, 25).map(r => [
+      r._id || '',
+      detectField(r, FIELD_ALIASES['submitted']).split('T')[0],
+      detectField(r, FIELD_ALIASES['woreda']),
+      detectField(r, FIELD_ALIASES['component']),
+      detectField(r, FIELD_ALIASES['status']),
+      detectField(r, FIELD_ALIASES['beneficiaries']) || '0'
+    ]);
+
+    doc.autoTable({
+      startY: 30,
+      head: [['ID', 'Date', 'Woreda', 'Component', 'Status', 'Benef']],
+      body: tableData,
+      font: 8,
+      headStyles: { fillColor: [10, 124, 58] }
+    });
+
+    doc.save(`DRDIP-II-Somali-Report-${new Date().toISOString().split('T')[0]}.pdf`);
+    showAlert('success', 'PDF exported successfully');
+  } catch (error) {
+    showAlert('error', `PDF export failed: ${error.message}`);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function exportCSV() {
+  const headers = ['ID', 'Submitted', 'Woreda', 'Kebele', 'Component', 'Sub-Component', 'Work Type', 'Status', 'Beneficiaries'];
+  const rows = FILTERED_DATA.map(r => [
+    r._id || '',
+    detectField(r, FIELD_ALIASES['submitted']).split('T')[0],
+    detectField(r, FIELD_ALIASES['woreda']),
+    detectField(r, FIELD_ALIASES['kebele']),
+    detectField(r, FIELD_ALIASES['component']),
+    detectField(r, FIELD_ALIASES['subcomponent']),
+    detectField(r, FIELD_ALIASES['worktype']),
+    detectField(r, FIELD_ALIASES['status']),
+    detectField(r, FIELD_ALIASES['beneficiaries']) || '0'
+  ]);
+
+  const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `DRDIP-II-Somali-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  showAlert('success', 'CSV exported successfully');
+}
+
+function exportJSON() {
+  const json = JSON.stringify(FILTERED_DATA, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `DRDIP-II-Somali-${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  showAlert('success', 'JSON exported successfully');
+}
+
+// ==================== UTILITIES ====================
+function detectField(record, fieldNames) {
+  if (!Array.isArray(fieldNames)) fieldNames = [fieldNames];
+  for (const name of fieldNames) {
+    if (record[name] !== undefined && record[name] !== null && record[name] !== '') {
+      return record[name];
+    }
+  }
+  return '';
+}
+
+function saveSettings() {
+  const token = document.getElementById('input-token').value.trim();
+  const asset = document.getElementById('input-asset').value.trim();
+  const server = document.getElementById('input-server').value.trim();
+
+  if (!token) {
+    showAlert('error', 'Token is required');
+    return;
+  }
+
+  CONFIG.TOKEN = token;
+  CONFIG.ASSET_UID = asset;
+  CONFIG.KOBO_BASE = server;
+
+  localStorage.setItem('kobo_token', token);
+  localStorage.setItem('asset_uid', asset);
+  localStorage.setItem('kobo_server', server);
+
+  closeModal('settings-modal');
+  loadData();
+}
+
+function openModal(id) {
+  document.getElementById(id).classList.add('active');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('active');
+}
+
+function updateStatus(text, connected) {
+  const dot = document.getElementById('status-dot');
+  const status = document.getElementById('status-text');
+  status.textContent = text;
+  if (connected) {
+    dot.classList.remove('error');
+  } else {
+    dot.classList.add('error');
+  }
+}
+
+function showAlert(type, message) {
+  const container = document.getElementById('alerts-container');
+  const alert = document.createElement('div');
+  alert.className = `alert alert-${type}`;
+  alert.innerHTML = `
+    <span>${message}</span>
+    <button class="alert-close" onclick="this.parentElement.remove();">&times;</button>
+  `;
+  container.appendChild(alert);
+  setTimeout(() => alert.remove(), 5000);
+}
+
+function setLoading(show) {
+  document.getElementById('loading-overlay').classList.toggle('active', show);
+}
+</script>
+
+</body>
+</html>
