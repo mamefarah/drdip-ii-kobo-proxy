@@ -1,5 +1,7 @@
 {
   "version": 2,
+  "buildCommand": "echo 'No build needed'",
+  "outputDirectory": ".",
   "functions": {
     "api/*.js": {
       "memory": 512,
@@ -9,13 +11,11 @@
   "routes": [
     {
       "src": "/api/kobo-proxy(.*)",
-      "dest": "/api/kobo-proxy.js",
-      "headers": {
-        "Cache-Control": "public, max-age=60"
-      }
+      "dest": "/api/kobo-proxy.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
     }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  }
+  ]
 }
